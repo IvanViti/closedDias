@@ -280,6 +280,11 @@ __global__ void findProbabilities(REAL *TField,REAL *probabilities,REAL *particl
 	}
 };
 
+__device__ void simpleFill(REAL *jumpRecord, REAL fillVal, int t) {
+        jumpRecord[t] = fillVal;
+}
+
+
 __device__ void fillRecord(REAL *jumpRecord,REAL fillVal,int N) {
 	int found = 0;
 	int n = 0;
@@ -296,7 +301,7 @@ __device__ void fillRecord(REAL *jumpRecord,REAL fillVal,int N) {
 
 
 //calculates which direction the electron went and how far (not necessary if you are not measuring anything)
- __global__ void interaction(parameters p,int x,int y,int newx,int newy,REAL *particles,REAL *jumpRecord,REAL *boxR) {
+ __global__ void interaction(parameters p,int x,int y,int newx,int newy,REAL *particles,REAL *jumpRecord,REAL *boxR,int tStep) {
         int N = p.N,obsx,obsy;
         int whichWay = 0;
         REAL fillVal;
@@ -337,7 +342,8 @@ __device__ void fillRecord(REAL *jumpRecord,REAL fillVal,int N) {
 		}
 
 
-	        fillRecord(jumpRecord,fillVal,p.recordLength);
+//	        fillRecord(jumpRecord,fillVal,p.recordLength);
+		simpleFill(jumpRecord,fillVal,tStep);
 
 	}
 }
@@ -629,7 +635,7 @@ cout<<"cell "<<v.herePicked[0]<<" was picked with a weight "<<v.hereProb[v.hereP
 	if (c_checkIn(newx,newy,p.N)) {
 //cout<<x<<" "<<y<<" "<<newx<<" "<<newy<<endl;
 	
-		interaction<<<blocks,threads>>>(p,x,y,newx,newy,v.particles,v.jumpRecord,v.boxR);
+		interaction<<<blocks,threads>>>(p,x,y,newx,newy,v.particles,v.jumpRecord,v.boxR,v.tStep);
 
         	potSwap<<<blocks,threads>>>(p, x, y,newx,newy,p.N,v.particles,v.boxR,v.potentials);
 	        particleMove<<<blocks,threads>>>(x, y, newx,newy,p.N,v.particles);
@@ -2277,7 +2283,7 @@ void vectorLoad(vectors &v,parameters p,int blocks, int threads){
         cudaMalloc(&v.boxR,N*N*N*N*sizeof(REAL));
 	cudaMalloc(&v.picked,sizeof(int));	
 
-	v.herePicked = new int[0];
+	v.herePicked = new int[1];
 	v.herePicked[0] = 0;
 	v.timeRun = new REAL[p.recordLength];
         v.sumRun = new REAL[p.recordLength];
