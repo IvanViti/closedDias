@@ -168,7 +168,7 @@ bool errorAsk(const char *s="n/a")
 }
 
 //The first half of the heart of this program. Here the probabilities are calculated based on the energy change of the system and on the localization of the electron.
-__global__ void findProbabilities(REAL *TField,REAL *probabilities,REAL *particles,REAL *potentials,REAL *substrate,REAL *boxR,REAL *watcher,int tStep,int x, int y, parameters p)
+__global__ void findProbabilities(REAL *KdArray,REAL *TField,REAL *probabilities,REAL *particles,REAL *potentials,REAL *substrate,REAL *boxR,REAL *watcher,int tStep,int x, int y, parameters p)
 {
 //	REAL number = 11;
     int idx=(blockIdx.y*gridDim.x+blockIdx.x)*blockDim.x+threadIdx.x;
@@ -204,7 +204,7 @@ __global__ void findProbabilities(REAL *TField,REAL *probabilities,REAL *particl
 			if(particles[x + N*y] > particles[thisi + N*thisj]) { //situation 1
 
 				blockadePart = -1*findBlockade(thatp,thisp,p.Ec)/boxR[hyperIndex];
-				potentialPart = -potConstant*(potentials[thisi + N*thisj] - potentials[x + N*y] - p.changeToV/boxR[hyperIndex]);
+				potentialPart = -sqrt(KdArray[thisi + N*thisj]*KdArray[x + N*y])*potConstant*(potentials[thisi + N*thisj] - potentials[x + N*y] - p.changeToV/boxR[hyperIndex]);
 				substratePart = substrate[thisi+ N*thisj];
 				currentPart = p.eV*i;
 				electronT = TField[x + N*y];
@@ -219,7 +219,7 @@ __global__ void findProbabilities(REAL *TField,REAL *probabilities,REAL *particl
 			if (particles[x + N*y] < particles[thisi + N*thisj]) { //situation 2
 
 				blockadePart = -1*findBlockade(thatp,thisp,p.Ec)/boxR[hyperIndex]; 
-				potentialPart = potConstant*(potentials[thisi + N*thisj] - potentials[x + N*y] + p.changeToV/boxR[hyperIndex]);
+				potentialPart = sqrt(KdArray[thisi + N*thisj]*KdArray[x + N*y])*potConstant*(potentials[thisi + N*thisj] - potentials[x + N*y] + p.changeToV/boxR[hyperIndex]);
 				substratePart = -substrate[thisi + N*thisj];
 				currentPart = -p.eV*i;
 				electronT = TField[thisi + N*thisj];
@@ -235,7 +235,7 @@ __global__ void findProbabilities(REAL *TField,REAL *probabilities,REAL *particl
 	
 				if (particles[x + N*y] < 0) { //then p1 is getting more negative and p2 is getting more positive (like in situation 1) 
 			                blockadePart = -1*findBlockade(thatp,thisp,p.Ec)/boxR[hyperIndex];
-		                        potentialPart = potConstant*(potentials[thisi + N*thisj] - potentials[x + N*y] + p.changeToV/boxR[hyperIndex]);
+		                        potentialPart = sqrt(KdArray[thisi + N*thisj]*KdArray[x + N*y])*potConstant*(potentials[thisi + N*thisj] - potentials[x + N*y] + p.changeToV/boxR[hyperIndex]);
 	        	                substratePart = -substrate[thisi + N*thisj];
 	                	        currentPart = -p.eV*i;	
 	
@@ -243,7 +243,7 @@ __global__ void findProbabilities(REAL *TField,REAL *probabilities,REAL *particl
 	
 				else  {  //then p1 is getting more positive and p2 is getting more negative (situation2-like transfer is happening)
 					blockadePart = -1*findBlockade(thatp,thisp,p.Ec)/boxR[hyperIndex];
-	                	        potentialPart = -potConstant*(potentials[thisi + N*thisj] - potentials[x + N*y] - p.changeToV/boxR[hyperIndex]);
+	                	        potentialPart = -sqrt(KdArray[thisi + N*thisj]*KdArray[x + N*y])*potConstant*(potentials[thisi + N*thisj] - potentials[x + N*y] - p.changeToV/boxR[hyperIndex]);
 	        	                substratePart = substrate[thisi+ N*thisj];
 		                        currentPart = p.eV*i;
 				}
@@ -2131,6 +2131,19 @@ __global__ void noGradient(REAL *TField,double temperature, int N) {
 
 }
 
+__global__ void createKd(REAL *KdArray,double highKd,int KdFrequency,int N){
+       	int idx=(blockIdx.y*gridDim.x+blockIdx.x)*blockDim.x+threadIdx.x;
+        if (idx < N*N) {
+		if (idx%KdFrequency == 0){
+			KdArray[idx] = 4/highKd;
+		}
+		else {
+			KdArray[idx] = 1;
+		}
+
+	}
+}
+
 
 //load parameters
 void paramLoad(parameters &p, char *argv[]){ 
@@ -2256,6 +2269,16 @@ void paramLoad(parameters &p, char *argv[]){
                                         realVal = atof(value.c_str());
                                         p.Ec = realVal;
                                 }
+                                if(key == "highKd") {
+                                        realVal = atof(value.c_str());
+                                        p.highKd = realVal;
+                                }
+                                if(key == "KdFrequency") {
+                                        realVal = atof(value.c_str());
+                                        p.KdFrequency = realVal;
+                                }
+
+
 
 	
 			}
@@ -2267,6 +2290,7 @@ void paramLoad(parameters &p, char *argv[]){
 //load arrays
 void vectorLoad(vectors &v,parameters p,int blocks, int threads){
 	int N = p.N;
+  	cudaMalloc(&v.KdArray,N*N*sizeof(REAL));
         cudaMalloc(&v.watcher,N*N*sizeof(REAL));
         cudaMalloc(&v.reducedProb,N*N*sizeof(REAL));
         cudaMalloc(&v.particles,N*N*sizeof(REAL));
@@ -2318,6 +2342,7 @@ void vectorLoad(vectors &v,parameters p,int blocks, int threads){
 //        aMaker<<<blocks,threads>>>(v.aMatrix,v.boxR,N);
 //        subCombine<<<blocks,threads>>>(v.aMatrix,v.substrate, p.L, N);
         jumpFill<<<blocks,threads>>>(v.jumpRecord,p.recordLength);
+	createKd<<<blocks,threads>>>(v.KdArray,p.highKd,p.KdFrequency,p.N);
 
 	v.min1 = 999;
 	v.min2 = 999;

@@ -18,7 +18,7 @@ using namespace std;
 
 class parameters {
 public:
-        double xi,muVar,xVar,yVar,eV,Ec,L,T,alphaOne,alphaTwo,rejection,boltzmann,changeToV,xMoment;
+        double xi,muVar,xVar,yVar,eV,Ec,L,T,alphaOne,alphaTwo,rejection,boltzmann,changeToV,xMoment,highKd,KdFrequency;
         int N,tSteps,nParticles,relax,grabJ,recordLength,whichBox;
 
 
@@ -31,8 +31,8 @@ public:
 
 class vectors {
 public:
-        REAL *reducedProb,*particles,*probabilities,*potentials,*substrate,*hereP,*hereProb,*herePot,*hereS,*boxR,*hereBoxR,*hereXDiff,*hereYDiff,*Ematrix,*jumpRecord,*tempDos,*tempPar,*tempPot,*invertedDos,*watcher,*aMatrix,*timeRun,*sumRun,*TField;
-        REAL *rangeMatrix,*extraArray,*sumArray,*hereSum;
+        REAL *reducedProb,*particles,*probabilities,*potentials,*substrate,*hereP,*hereProb,*herePot,*hereS,*boxR,*hereBoxR,*hereXDiff,*hereYDiff,*Ematrix,*jumpRecord,*tempDos,*tempPar,*tempPot,*invertedDos,*watcher,*aMatrix,*timeRun,*sumRun,*TField,*KdArray;
+        REAL *rangeMatrix,*extraArray,*sumArray,*hereSum,*KdArray;
         REAL results[5];
         int *picked;
         int *herePicked;//wtf cuda
