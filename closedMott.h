@@ -32,7 +32,7 @@ public:
 class vectors {
 public:
         REAL *reducedProb,*particles,*probabilities,*potentials,*substrate,*hereP,*hereProb,*herePot,*hereS,*boxR,*hereBoxR,*hereXDiff,*hereYDiff,*Ematrix,*jumpRecord,*tempDos,*tempPar,*tempPot,*invertedDos,*watcher,*aMatrix,*timeRun,*sumRun,*TField,*KdArray;
-        REAL *rangeMatrix,*extraArray,*sumArray,*hereSum,*KdArray;
+        REAL *rangeMatrix,*extraArray,*sumArray,*hereSum;
         REAL results[5];
         int *picked;
         int *herePicked;//wtf cuda

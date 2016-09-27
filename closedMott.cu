@@ -678,7 +678,7 @@ void findTime(parameters p,int blocks,int threads,vectors &v) {
 
 	for (y = 0; y < p.N; y++) {
 		for(x = 0;x < p.N; x++) {
-			findProbabilities<<<blocks,threads>>>(v.TField,v.probabilities,v.particles,v.potentials,v.substrate,v.boxR,v.watcher,v.tStep,x,y,p);
+			findProbabilities<<<blocks,threads>>>(v.KdArray,v.TField,v.probabilities,v.particles,v.potentials,v.substrate,v.boxR,v.watcher,v.tStep,x,y,p);
 			result = thrust::reduce(g_go, g_go + p.N*p.N);		
 			totalSum += result;
 /*
@@ -720,7 +720,7 @@ void findJump(vectors &v,int threads,int blocks,parameters p) {
 
 	x = v.herePicked[0]%p.N;
         y = v.herePicked[0]/p.N;
-	findProbabilities<<<blocks,threads>>>(v.TField,v.probabilities,v.particles,v.potentials,v.substrate,v.boxR,v.watcher,v.tStep,x,y,p);
+	findProbabilities<<<blocks,threads>>>(v.KdArray,v.TField,v.probabilities,v.particles,v.potentials,v.substrate,v.boxR,v.watcher,v.tStep,x,y,p);
 	errorAsk("find probabilities"); //check for error
 //	printBoxGPU(v.potentials,p.N,"pot3.dat");
 	
