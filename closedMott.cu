@@ -263,8 +263,8 @@ __global__ void findProbabilities(REAL *KdArray,REAL *TField,REAL *probabilities
 			}
 	
 			probabilities[idx] = exp(distancePart+energyPart);
-			watcher[idx] = distancePart+p.alphaTwo*(blockadePart+potentialPart+substratePart+currentPart)/electronT;
-	
+//			watcher[idx] = distancePart+p.alphaTwo*(blockadePart+potentialPart+substratePart+currentPart)/electronT;
+			watcher[idx] = KdArray[idx];	
 	
 	
 			if ((thisi==x && thisj==y )  ){
@@ -1308,7 +1308,7 @@ __global__ void slowSwap(parameters p,int i1,int j1,int i2, int j2,int intN, REA
 //					watcher[idx] = tempPot[idx]*tempPar[idx] ;
 					}
 				}
-			watcher[idx] = substrate[idx]*tempPar[idx];
+//			watcher[idx] = substrate[idx]*tempPar[idx];
 			}
 //		tempDos[idx] = probe;
 		}
@@ -2135,11 +2135,14 @@ __global__ void createKd(REAL *KdArray,double highKd,int KdFrequency,int N){
        	int idx=(blockIdx.y*gridDim.x+blockIdx.x)*blockDim.x+threadIdx.x;
         if (idx < N*N) {
 		if (idx%KdFrequency == 0){
-			KdArray[idx] = 4/highKd;
+			KdArray[idx] = 4/highKd; //since kd is the denominator
 		}
 		else {
 			KdArray[idx] = 1;
 		}
+
+		
+
 
 	}
 }
@@ -2188,6 +2191,8 @@ void paramLoad(parameters &p, char *argv[]){
         p.yVar = 0; // typically = xVar
 	p.rejection = 0; //default no rejection
 	p.xMoment = 0;
+	p.KdFrequency=2;
+	p.highKd=4;
 
 	int intVal;
 	REAL realVal;
@@ -2373,8 +2378,8 @@ void vectorLoad(vectors &v,parameters p,int blocks, int threads){
                 }
         }
         findE<<<blocks,threads>>>(p.N, v.Ematrix,v.particles,v.potentials,v.substrate); 
-	noGradient<<<blocks,threads>>>(v.TField,15,p.N);
-//	tempGradient<<<blocks,threads>>>(v.TField,15,500,p.N); //maximum gradient
+//	noGradient<<<blocks,threads>>>(v.TField,15,p.N);
+	tempGradient<<<blocks,threads>>>(v.TField,15,500,p.N); //maximum gradient
 //        tempGradient<<<blocks,threads>>>(v.TField,30,31,p.N); //almost no gradient
 
 }
@@ -2466,7 +2471,7 @@ int main(int argc,char *argv[])
 	}
 	printLineCPU(v.sumRun, p.timeName);
 	printLineGPU(v.jumpRecord,p.recordLength,p.lineName);
-//	printBoxGPU(v.watcher,p.N,"watcher.dat");	
+	printBoxGPU(v.watcher,p.N,"watcher.dat");	
 	p.xMoment = findDipole(v.particles,p.N);	
 	cout<<p.xMoment<<endl;
 /*
